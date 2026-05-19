@@ -1,0 +1,4 @@
+.specstory/
+build/
+*.zip
+.DS_Store
