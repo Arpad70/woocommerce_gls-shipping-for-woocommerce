@@ -3,7 +3,7 @@ Contributors: goran87
 Tags: gls, shipping, woocommerce shipping
 Requires at least: 5.9
 Tested up to: 6.9
-Stable tag: 1.4.3
+Stable tag: 1.4.4
 License: GPLv2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -80,6 +80,10 @@ To install and configure this plugin:
 == Screenshots ==
 
 == Changelog ==
+
+= 1.4.4 =
+* Fix: GLS parcel locker / parcel shop selection now survives checkout refresh correctly and no longer breaks due to missing map element lookup.
+* Fix: COD hiding now works reliably for GLS zone instances (`...:instance_id`) because selected shipping method IDs are normalized before session checks.
 
 = 1.4.3 =
 * AR Design release skeleton: added VERSION file, changelog, build script, release workflow, and version consistency checks.

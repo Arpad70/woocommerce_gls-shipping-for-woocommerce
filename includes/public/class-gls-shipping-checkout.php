@@ -58,7 +58,7 @@ class GLS_Shipping_Checkout
      */
     public function validate_gls_parcel_shop_selection()
     {
-        $chosen_shipping_methods = WC()->session->get('chosen_shipping_methods');
+        $chosen_shipping_methods = $this->normalize_shipping_method_ids(WC()->session->get('chosen_shipping_methods'));
         if (!is_array($chosen_shipping_methods)) {
             $chosen_shipping_methods = [];
         }
@@ -150,10 +150,9 @@ class GLS_Shipping_Checkout
 
         parse_str((string) $posted_data, $parsed_data);
 
-        $chosen_shipping_methods = $parsed_data['shipping_method'] ?? WC()->session->get('chosen_shipping_methods', array());
-        if (!is_array($chosen_shipping_methods)) {
-            $chosen_shipping_methods = array();
-        }
+        $chosen_shipping_methods = $this->normalize_shipping_method_ids(
+            $parsed_data['shipping_method'] ?? WC()->session->get('chosen_shipping_methods', array())
+        );
 
         $is_gls_pickup_method_selected = (bool) array_intersect($this->map_selection_methods, $chosen_shipping_methods);
         $pickup_info = isset($parsed_data['gls_pickup_info']) ? sanitize_text_field(wp_unslash($parsed_data['gls_pickup_info'])) : '';
@@ -165,6 +164,29 @@ class GLS_Shipping_Checkout
         }
 
         WC()->session->set(self::SESSION_PICKUP_INFO_KEY, '');
+    }
+
+    /**
+     * Normalize WooCommerce shipping rate IDs to method IDs without instance suffix.
+     *
+     * @param mixed $shipping_methods Raw shipping methods collection.
+     * @return array<int, string>
+     */
+    private function normalize_shipping_method_ids($shipping_methods)
+    {
+        if (!is_array($shipping_methods)) {
+            return array();
+        }
+
+        return array_values(array_filter(array_map(static function ($shipping_method) {
+            $shipping_method = strtolower(trim((string) $shipping_method));
+
+            if ($shipping_method === '') {
+                return null;
+            }
+
+            return (string) strtok($shipping_method, ':');
+        }, $shipping_methods)));
     }
 }
 

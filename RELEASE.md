@@ -1,5 +1,16 @@
 # Release
 
+## 1.4.4
+
+Follow-up release pro checkout opravu GLS výběru pickup pointu a spolehlivého schování dobírky.
+
+### Změny
+
+- opraven frontend GLS checkout flow po `updated_checkout`,
+- odstraněn pád na neexistujícím `#gls-map`,
+- výběr pickup pointu se po refreshi checkoutu zachová, dokud se opravdu nezmění dopravní metoda,
+- zónové GLS shipping method ID se normalizují bez `:instance_id`, takže COD filtr pracuje korektně i pro shipping zones.
+
 ## 1.4.3
 
 První AR Design standalone release pluginu `gls-shipping-for-woocommerce`.
