@@ -115,6 +115,88 @@ class GLS_Shipping_Order
             echo '<br/><strong>' . esc_html__('GLS Tracking Number: ', 'gls-shipping-for-woocommerce') . '<a href="' . esc_url($tracking_url) . '" target="_blank">' . esc_html($tracking_code) . '</a></strong><br>';
         }
     }
+
+    private function display_gls_tracking_diagnostics($order)
+    {
+        if (!$order instanceof \WC_Order) {
+            return;
+        }
+
+        $current_status_key = class_exists('GLS_Shipping_Workflow')
+            ? \GLS_Shipping_Workflow::CURRENT_STATUS_META_KEY
+            : '_gls_tracking_current_status';
+        $current_status_code_key = class_exists('GLS_Shipping_Workflow')
+            ? \GLS_Shipping_Workflow::CURRENT_STATUS_CODE_META_KEY
+            : '_gls_tracking_current_status_code';
+        $current_label_key = class_exists('GLS_Shipping_Workflow')
+            ? \GLS_Shipping_Workflow::CURRENT_LABEL_META_KEY
+            : '_gls_tracking_current_label';
+        $current_description_key = class_exists('GLS_Shipping_Workflow')
+            ? \GLS_Shipping_Workflow::CURRENT_DESCRIPTION_META_KEY
+            : '_gls_tracking_current_description';
+        $current_date_key = class_exists('GLS_Shipping_Workflow')
+            ? \GLS_Shipping_Workflow::CURRENT_DATE_META_KEY
+            : '_gls_tracking_current_date';
+        $current_location_key = class_exists('GLS_Shipping_Workflow')
+            ? \GLS_Shipping_Workflow::CURRENT_LOCATION_META_KEY
+            : '_gls_tracking_current_location';
+        $last_sync_at_key = class_exists('GLS_Shipping_Workflow')
+            ? \GLS_Shipping_Workflow::LAST_SYNC_AT_META_KEY
+            : '_gls_tracking_last_sync_at';
+
+        $current_status = (string) $order->get_meta($current_status_key, true);
+        $current_status_code = (string) $order->get_meta($current_status_code_key, true);
+        $current_label = (string) $order->get_meta($current_label_key, true);
+        $current_description = (string) $order->get_meta($current_description_key, true);
+        $current_date = (string) $order->get_meta($current_date_key, true);
+        $current_location = (string) $order->get_meta($current_location_key, true);
+        $last_sync_at = (string) $order->get_meta($last_sync_at_key, true);
+
+        if (
+            $current_status === ''
+            && $current_status_code === ''
+            && $current_label === ''
+            && $current_description === ''
+            && $current_date === ''
+            && $current_location === ''
+            && $last_sync_at === ''
+        ) {
+            return;
+        }
+
+        echo '<div style="margin-top:12px;padding:10px;border:1px solid #dcdcde;border-radius:4px;background:#f6f7f7;">';
+        echo '<strong>' . esc_html__('GLS Tracking Diagnostics:', 'gls-shipping-for-woocommerce') . '</strong><br/>';
+
+        if ($current_label !== '') {
+            echo '<strong>' . esc_html__('Current Label:', 'gls-shipping-for-woocommerce') . '</strong> ' . esc_html($current_label) . '<br/>';
+        }
+
+        if ($current_status_code !== '') {
+            echo '<strong>' . esc_html__('Status Code:', 'gls-shipping-for-woocommerce') . '</strong> ' . esc_html($current_status_code) . '<br/>';
+        }
+
+        if ($current_status !== '') {
+            echo '<strong>' . esc_html__('Mapped Workflow Status:', 'gls-shipping-for-woocommerce') . '</strong> <code>' . esc_html($current_status) . '</code><br/>';
+        }
+
+        if ($current_description !== '') {
+            echo '<strong>' . esc_html__('Carrier Description:', 'gls-shipping-for-woocommerce') . '</strong> ' . esc_html($current_description) . '<br/>';
+        }
+
+        if ($current_location !== '') {
+            echo '<strong>' . esc_html__('Location:', 'gls-shipping-for-woocommerce') . '</strong> ' . esc_html($current_location) . '<br/>';
+        }
+
+        if ($current_date !== '') {
+            echo '<strong>' . esc_html__('Event Time:', 'gls-shipping-for-woocommerce') . '</strong> ' . esc_html($current_date) . '<br/>';
+        }
+
+        if ($last_sync_at !== '') {
+            echo '<strong>' . esc_html__('Last Sync:', 'gls-shipping-for-woocommerce') . '</strong> ' . esc_html($last_sync_at) . '<br/>';
+        }
+
+        echo '</div>';
+    }
     
 
     public function gls_shipping_info_meta_box_content($order_or_post_id)
@@ -141,11 +223,12 @@ class GLS_Shipping_Order
         }
 
         $this->display_gls_pickup_info($order->get_id(), false);
+        $this->display_gls_tracking_diagnostics($order);
 ?>
         <h4 style="margin-bottom:0px;">
             <div style="margin-top:10px;">
                 <?php if ($gls_print_label) { ?>
-                    <a class="button primary" href="<?php echo esc_url($gls_print_label); ?>" target="_blank" style="width: 100%; text-align: center; display: block; box-sizing: border-box;"><?php esc_html_e("Print Label", "gls-shipping-for-woocommerce"); ?></a>
+                    <a class="button primary gls-admin-download-label" href="<?php echo esc_url($gls_print_label); ?>" target="_blank" data-order-id="<?php echo esc_attr($order->get_id()); ?>" style="width: 100%; text-align: center; display: block; box-sizing: border-box;"><?php esc_html_e("Print Label", "gls-shipping-for-woocommerce"); ?></a>
                     <div style="margin-top:10px;display: flex; flex-direction: column;">
                         <div style="margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
                             <span><?php esc_html_e("Number of Packages:", "gls-shipping-for-woocommerce"); ?></span>
@@ -435,6 +518,13 @@ class GLS_Shipping_Order
         try {
             $api_service = new \GLS_Shipping_API_Service();
             $tracking_data = $api_service->get_parcel_status($parcel_number);
+            if (class_exists('GLS_Shipping_Workflow')) {
+                $workflow = new \GLS_Shipping_Workflow();
+                $order = wc_get_order($order_id);
+                if ($order instanceof \WC_Order) {
+                    $workflow->process_tracking_response($order, $tracking_data);
+                }
+            }
             
             wp_send_json_success(array('tracking_data' => $tracking_data));
         } catch (Exception $e) {

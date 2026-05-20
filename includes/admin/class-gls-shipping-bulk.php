@@ -68,7 +68,7 @@ class GLS_Shipping_Bulk
         if ($gls_print_label) {
             // Action to download existing GLS label
             $actions['gls_download_label'] = array(
-                'url'    => $gls_print_label,
+                'url'    => add_query_arg('gls_order_id', $order_id, $gls_print_label),
                 'target' => '_blank',
                 'name'   => __('Download GLS Label', 'gls-shipping-for-woocommerce'),
                 'action' => 'gls-download-label',
@@ -550,7 +550,35 @@ class GLS_Shipping_Bulk
 
         // Display the tracking numbers (each element is already escaped with esc_html())
         if (!empty($tracking_numbers)) {
-            echo wp_kses_post( implode(' ', $tracking_numbers) );
+            echo wp_kses_post(implode(' ', $tracking_numbers));
+
+            $current_status_code = (string) $order->get_meta('_gls_tracking_current_status_code', true);
+            $current_label = (string) $order->get_meta('_gls_tracking_current_label', true);
+            $current_status = (string) $order->get_meta('_gls_tracking_current_status', true);
+
+            if ($current_status_code !== '' || $current_label !== '' || $current_status !== '') {
+                echo '<br/><small style="display:block;margin-top:4px;line-height:1.35;">';
+
+                if ($current_status_code !== '') {
+                    echo '<strong>' . esc_html__('Code:', 'gls-shipping-for-woocommerce') . '</strong> <code>' . esc_html($current_status_code) . '</code>';
+                }
+
+                if ($current_label !== '') {
+                    if ($current_status_code !== '') {
+                        echo '<br/>';
+                    }
+
+                    echo '<strong>' . esc_html__('Status:', 'gls-shipping-for-woocommerce') . '</strong> <span title="' . esc_attr($current_status) . '">' . esc_html($current_label) . '</span>';
+                } elseif ($current_status !== '') {
+                    if ($current_status_code !== '') {
+                        echo '<br/>';
+                    }
+
+                    echo '<strong>' . esc_html__('Status:', 'gls-shipping-for-woocommerce') . '</strong> <code>' . esc_html($current_status) . '</code>';
+                }
+
+                echo '</small>';
+            }
         } else {
             echo '-';
         }

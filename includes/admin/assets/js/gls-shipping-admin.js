@@ -359,6 +359,71 @@
 			generateGLSLabel(orderId, $button, null, null, null, null); // Use saved order settings for all parameters
 		});
 
+		$(document).on('click', 'a.gls-download-label, a.gls-admin-download-label', function (e) {
+			e.preventDefault();
+
+			const $link = $(this);
+			const url = $link.attr('href');
+			const orderId = resolveDownloadOrderId($link);
+
+			if (!url) {
+				return;
+			}
+
+			window.open(url, '_blank', 'noopener');
+
+			if (!orderId) {
+				return;
+			}
+
+			if (!window.confirm(gls_croatia.labelPrintedConfirm || '')) {
+				return;
+			}
+
+			$.ajax({
+				url: gls_croatia.adminAjaxUrl,
+				type: 'POST',
+				data: {
+					action: 'gls_mark_label_printed',
+					orderId: orderId,
+					postNonce: gls_croatia.ajaxNonce
+				},
+				success: function (response) {
+					if (response && response.success) {
+						window.alert((response.data && response.data.message) || gls_croatia.labelPrintedSuccess || '');
+						window.location.reload();
+						return;
+					}
+
+					window.alert((response && response.data && response.data.message) || gls_croatia.labelPrintedError || '');
+				},
+				error: function () {
+					window.alert(gls_croatia.labelPrintedError || '');
+				}
+			});
+		});
+
+		function resolveDownloadOrderId($link) {
+			const dataOrderId = parseInt($link.data('orderId'), 10);
+			if (!Number.isNaN(dataOrderId) && dataOrderId > 0) {
+				return dataOrderId;
+			}
+
+			const href = $link.attr('href') || '';
+			const parsedUrl = new URL(href, window.location.origin);
+			const queryOrderId = parseInt(parsedUrl.searchParams.get('gls_order_id'), 10);
+			if (!Number.isNaN(queryOrderId) && queryOrderId > 0) {
+				return queryOrderId;
+			}
+
+			const rowOrderId = parseInt($link.closest('tr').find('.check-column input').val(), 10);
+			if (!Number.isNaN(rowOrderId) && rowOrderId > 0) {
+				return rowOrderId;
+			}
+
+			return 0;
+		}
+
 		function collectServiceOptions() {
 			// Always collect current service options from the form
 			// This ensures saved services are properly sent even when panel is closed

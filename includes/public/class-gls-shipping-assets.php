@@ -87,7 +87,7 @@ class GLS_Shipping_Assets
         }
 
         // Try zones parcel locker method - get from first active instance
-        $shipping_zones = WC_Shipping_Zones::get_zones();
+        $shipping_zones = \WC_Shipping_Zones::get_zones();
         foreach ($shipping_zones as $zone) {
             foreach ($zone['shipping_methods'] as $method) {
                 if ($method->id === GLS_SHIPPING_METHOD_PARCEL_LOCKER_ZONES_ID && $method->enabled === 'yes') {
@@ -138,6 +138,9 @@ class GLS_Shipping_Assets
                 'name' => __('Name', 'gls-shipping-for-woocommerce'),
                 'address' => __('Address', 'gls-shipping-for-woocommerce'),
                 'country' => __('Country', 'gls-shipping-for-woocommerce'),
+                'labelPrintedConfirm' => __('Potvrďte prosím, že štítok bol naozaj vytlačený a objednávka sa má prepnúť na stav Na odoslanie.', 'gls-shipping-for-woocommerce'),
+                'labelPrintedSuccess' => __('Objednávka bola prepnutá na stav Na odoslanie.', 'gls-shipping-for-woocommerce'),
+                'labelPrintedError' => __('Stav objednávky sa nepodarilo zmeniť.', 'gls-shipping-for-woocommerce'),
             );
             
             // GLS map scripts will be loaded dynamically when needed

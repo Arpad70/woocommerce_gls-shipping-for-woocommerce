@@ -3,7 +3,7 @@ Contributors: goran87
 Tags: gls, shipping, woocommerce shipping
 Requires at least: 5.9
 Tested up to: 6.9
-Stable tag: 1.4.4
+Stable tag: 1.4.5
 License: GPLv2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -80,6 +80,11 @@ To install and configure this plugin:
 == Screenshots ==
 
 == Changelog ==
+
+= 1.4.5 =
+* Added post-label workflow automation support including print confirmation handling and automatic order status transitions driven by GLS tracking updates.
+* Switched GLS tracking mapping to code-first processing with explicit support for real carrier statuses `51` (Data sent) and `52` (COD data sent).
+* Added GLS tracking diagnostics to the order detail and order list, including current label, status code, mapped workflow status, description, location, event time, and last sync.
 
 = 1.4.4 =
 * Fix: GLS parcel locker / parcel shop selection now survives checkout refresh correctly and no longer breaks due to missing map element lookup.

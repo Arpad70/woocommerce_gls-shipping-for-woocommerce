@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.4.5 - 2026-05-20
+
+- Added post-label workflow automation support including print confirmation handling and automatic order status transitions driven by GLS tracking updates.
+- Switched GLS tracking mapping to code-first processing with explicit support for real carrier statuses `51` (Data sent) and `52` (COD data sent).
+- Added GLS tracking diagnostics to the order detail and order list, including current label, status code, mapped workflow status, description, location, event time, and last sync.
+
 ## 1.4.4 - 2026-05-20
 
 - Fixed GLS checkout JavaScript so parcel locker / parcel shop dialog opening no longer breaks on checkout refresh because of missing `#gls-map` lookup.

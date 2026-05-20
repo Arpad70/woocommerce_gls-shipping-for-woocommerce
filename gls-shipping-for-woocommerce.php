@@ -3,7 +3,7 @@
 /**
  * Plugin Name: AR Design GLS Shipping for WooCommerce
  * Description: AR Design maintained GLS Shipping for WooCommerce plugin with checkout pickup fixes, release workflow, and GitHub updater metadata.
- * Version: 1.4.4
+ * Version: 1.4.5
  * Author: Arpád Horák
  * License: GPLv2
  * License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -30,7 +30,7 @@ if (!defined('GLS_SHIPPING_ABSPATH')) {
 }
 
 if (!defined('GLS_SHIPPING_VERSION')) {
-    define('GLS_SHIPPING_VERSION', '1.4.4');
+    define('GLS_SHIPPING_VERSION', '1.4.5');
 }
 
 if (!defined('GLS_LABELS_DIR') || !defined('GLS_LABELS_URL')) {
@@ -73,7 +73,7 @@ final class GLS_Shipping_For_Woo
 {
     private static $instance;
 
-    private $version = '1.4.4';
+    private $version = '1.4.5';
 
     private function __construct()
     {
@@ -95,6 +95,8 @@ final class GLS_Shipping_For_Woo
         require_once(GLS_SHIPPING_ABSPATH . 'includes/public/class-gls-shipping-my-account.php');
         require_once(GLS_SHIPPING_ABSPATH . 'includes/public/class-gls-shipping-logo-display.php');
         require_once(GLS_SHIPPING_ABSPATH . 'includes/admin/class-gls-shipping-product-restrictions.php');
+        require_once(GLS_SHIPPING_ABSPATH . 'includes/api/class-gls-shipping-api-service.php');
+        require_once(GLS_SHIPPING_ABSPATH . 'includes/admin/class-gls-shipping-workflow.php');
 
         // Migration class loaded always (Action Scheduler needs it for cron)
         require_once(GLS_SHIPPING_ABSPATH . 'includes/admin/class-gls-shipping-label-migration.php');
@@ -105,7 +107,6 @@ final class GLS_Shipping_For_Woo
             require_once(GLS_SHIPPING_ABSPATH . 'includes/admin/class-gls-shipping-pickup-history.php');
             require_once(GLS_SHIPPING_ABSPATH . 'includes/admin/class-gls-shipping-pickup.php');
             require_once(GLS_SHIPPING_ABSPATH . 'includes/api/class-gls-shipping-api-data.php');
-            require_once(GLS_SHIPPING_ABSPATH . 'includes/api/class-gls-shipping-api-service.php');
             require_once(GLS_SHIPPING_ABSPATH . 'includes/api/class-gls-shipping-pickup-api-service.php');
         }
 
