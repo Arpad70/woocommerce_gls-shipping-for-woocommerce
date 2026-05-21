@@ -8,10 +8,10 @@ class GLS_Shipping_Workflow
 {
     public const CRON_HOOK = 'gls_shipping_tracking_sync_event';
     public const CRON_SCHEDULE = 'gls_shipping_every_thirty_minutes';
-    public const RETURN_STATUS = 'vratka';
-    public const READY_TO_SHIP_STATUS = 'na-odoslanie';
-    public const IN_TRANSIT_STATUS = 'v-preprave';
-    public const MANUAL_REVIEW_STATUS = 'manual-review';
+    public const RETURN_STATUS = ARD_WORKFLOW_STATUS_RETURN;
+    public const READY_TO_SHIP_STATUS = ARD_WORKFLOW_STATUS_READY_TO_SHIP;
+    public const IN_TRANSIT_STATUS = ARD_WORKFLOW_STATUS_IN_TRANSIT;
+    public const MANUAL_REVIEW_STATUS = ARD_WORKFLOW_STATUS_MANUAL_REVIEW;
     public const CURRENT_STATUS_META_KEY = '_gls_tracking_current_status';
     public const CURRENT_STATUS_CODE_META_KEY = '_gls_tracking_current_status_code';
     public const CURRENT_LABEL_META_KEY = '_gls_tracking_current_label';
@@ -21,58 +21,51 @@ class GLS_Shipping_Workflow
     public const LAST_SYNC_AT_META_KEY = '_gls_tracking_last_sync_at';
     public const HISTORY_META_KEY = '_gls_tracking_history';
 
+    private const MANAGED_STATUSES = array(
+        self::READY_TO_SHIP_STATUS,
+        self::IN_TRANSIT_STATUS,
+        self::RETURN_STATUS,
+    );
+
     public function __construct()
     {
-        add_action('init', array($this, 'register_return_status'));
-        add_filter('wc_order_statuses', array($this, 'register_return_status_in_lists'));
+        add_action('init', array($this, 'register_workflow_statuses'));
+        add_filter('wc_order_statuses', array($this, 'register_workflow_statuses_in_lists'));
         add_filter('cron_schedules', array($this, 'register_cron_schedules'));
         add_action('init', array($this, 'maybe_schedule_tracking_cron'));
         add_action(self::CRON_HOOK, array($this, 'sync_open_shipments'));
         add_action('wp_ajax_gls_mark_label_printed', array($this, 'ajax_mark_label_printed'));
     }
 
-    public function register_return_status()
+    public function register_workflow_statuses()
     {
-        $status_key = 'wc-' . self::RETURN_STATUS;
-        if (function_exists('post_status_exists') && \post_status_exists($status_key)) {
-            return;
-        }
-
-        register_post_status(
-            $status_key,
-            array(
-                'label' => _x('Vratka', 'Order status', 'gls-shipping-for-woocommerce'),
-                'public' => true,
-                'exclude_from_search' => false,
-                'show_in_admin_all_list' => true,
-                'show_in_admin_status_list' => true,
-                'label_count' => _n_noop('Vratka <span class="count">(%s)</span>', 'Vratka <span class="count">(%s)</span>', 'gls-shipping-for-woocommerce'),
-            )
-        );
+        ard_workflow_register_post_statuses(self::MANAGED_STATUSES, 'gls-shipping-for-woocommerce');
     }
 
-    public function register_return_status_in_lists($statuses)
+    public function register_workflow_statuses_in_lists($statuses)
     {
-        $status_key = 'wc-' . self::RETURN_STATUS;
-        if (isset($statuses[$status_key])) {
+        $required_status_keys = array_map(static function ($status) {
+            return ard_workflow_wc_status_key($status);
+        }, self::MANAGED_STATUSES);
+        $missing_status_keys = array_diff($required_status_keys, array_keys($statuses));
+
+        if ($missing_status_keys === array()) {
             return $statuses;
         }
 
-        $result = array();
-        $inserted = false;
-        foreach ($statuses as $key => $label) {
-            $result[$key] = $label;
-            if (in_array($key, array('wc-v-preprave', 'wc-na-odoslanie', 'wc-completed'), true)) {
-                $result[$status_key] = __('Vratka', 'gls-shipping-for-woocommerce');
-                $inserted = true;
-            }
-        }
+        $statuses = ard_workflow_insert_statuses_after(
+            $statuses,
+            array(self::READY_TO_SHIP_STATUS, self::IN_TRANSIT_STATUS),
+            'gls-shipping-for-woocommerce',
+            'wc-processing'
+        );
 
-        if (!$inserted) {
-            $result[$status_key] = __('Vratka', 'gls-shipping-for-woocommerce');
-        }
-
-        return $result;
+        return ard_workflow_insert_statuses_after(
+            $statuses,
+            array(self::RETURN_STATUS),
+            'gls-shipping-for-woocommerce',
+            'wc-completed'
+        );
     }
 
     public function register_cron_schedules($schedules)

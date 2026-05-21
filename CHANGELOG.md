@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.4.6 - 2026-05-21
+
+- GLS workflow registrace je nově napojená na sdílený AR Design workflow catalog, takže vendor plugin používá stejné slugy a labely jako ostatní carrier vrstvy.
+- Vendor GLS workflow už znovu nepřebírá `manual-review` jako vlastní status owner, čímž se srovnává s guard-first architekturou na pracovním webu.
+- Release dorovnává repozitář s produkčně cíleným ownership refactorem a odstraňuje drift oproti pracovním úpravám.
+
 ## 1.4.5 - 2026-05-20
 
 - Added post-label workflow automation support including print confirmation handling and automatic order status transitions driven by GLS tracking updates.
