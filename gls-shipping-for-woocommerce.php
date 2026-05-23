@@ -3,7 +3,7 @@
 /**
  * Plugin Name: AR Design GLS Shipping for WooCommerce
  * Description: AR Design maintained GLS Shipping for WooCommerce plugin with checkout pickup fixes, release workflow, and GitHub updater metadata.
- * Version: 1.4.6
+ * Version: 1.4.7
  * Author: Arpád Horák
  * License: GPLv2
  * License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -16,7 +16,7 @@
  * Requires PHP: 7.1
  *
  * WC requires at least: 5.6
- * WC tested up to: 9.1
+ * WC tested up to: 10.6.1
  */
 
 defined('ABSPATH') || exit;
@@ -30,7 +30,7 @@ if (!defined('GLS_SHIPPING_ABSPATH')) {
 }
 
 if (!defined('GLS_SHIPPING_VERSION')) {
-    define('GLS_SHIPPING_VERSION', '1.4.6');
+    define('GLS_SHIPPING_VERSION', '1.4.7');
 }
 
 if (!defined('GLS_LABELS_DIR') || !defined('GLS_LABELS_URL')) {
@@ -73,15 +73,15 @@ final class GLS_Shipping_For_Woo
 {
     private static $instance;
 
-    private $version = '1.4.6';
+    private $version = '1.4.7';
+    private $woocommerce_runtime_bootstrapped = false;
 
     private function __construct()
     {
         $this->define_constants();
         spl_autoload_register(array($this, 'autoloader'));
 
-        $this->includes();
-        $this->init_hooks();
+        $this->init_core_hooks();
     }
 
     private function includes()
@@ -110,14 +110,12 @@ final class GLS_Shipping_For_Woo
             require_once(GLS_SHIPPING_ABSPATH . 'includes/api/class-gls-shipping-pickup-api-service.php');
         }
 
-        if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_option('active_plugins')))) {
-            require_once(GLS_SHIPPING_ABSPATH . 'includes/methods/class-gls-shipping-method.php');
-            require_once(GLS_SHIPPING_ABSPATH . 'includes/methods/class-gls-shipping-method-zones.php');
-            require_once(GLS_SHIPPING_ABSPATH . 'includes/methods/class-gls-shipping-method-parcel-shop.php');
-            require_once(GLS_SHIPPING_ABSPATH . 'includes/methods/class-gls-shipping-method-parcel-shop-zones.php');
-            require_once(GLS_SHIPPING_ABSPATH . 'includes/methods/class-gls-shipping-method-parcel-locker.php');
-            require_once(GLS_SHIPPING_ABSPATH . 'includes/methods/class-gls-shipping-method-parcel-locker-zones.php');
-        }
+        require_once(GLS_SHIPPING_ABSPATH . 'includes/methods/class-gls-shipping-method.php');
+        require_once(GLS_SHIPPING_ABSPATH . 'includes/methods/class-gls-shipping-method-zones.php');
+        require_once(GLS_SHIPPING_ABSPATH . 'includes/methods/class-gls-shipping-method-parcel-shop.php');
+        require_once(GLS_SHIPPING_ABSPATH . 'includes/methods/class-gls-shipping-method-parcel-shop-zones.php');
+        require_once(GLS_SHIPPING_ABSPATH . 'includes/methods/class-gls-shipping-method-parcel-locker.php');
+        require_once(GLS_SHIPPING_ABSPATH . 'includes/methods/class-gls-shipping-method-parcel-locker-zones.php');
     }
     /**
      * Define RAF Constants.
@@ -194,13 +192,24 @@ final class GLS_Shipping_For_Woo
         }
     }
 
-    private function init_hooks()
+    private function init_core_hooks()
     {
-        add_filter('woocommerce_shipping_methods', array($this, 'add_gls_shipping_methods'));
         add_action('init', array($this, 'load_textdomain'));
-        
         // Add download endpoint for secure PDF serving
         add_action('admin_init', array($this, 'handle_label_download'));
+        add_action('woocommerce_loaded', array($this, 'bootstrap_woocommerce_runtime'));
+    }
+
+    public function bootstrap_woocommerce_runtime()
+    {
+        if ($this->woocommerce_runtime_bootstrapped) {
+            return;
+        }
+
+        $this->woocommerce_runtime_bootstrapped = true;
+        $this->includes();
+
+        add_filter('woocommerce_shipping_methods', array($this, 'add_gls_shipping_methods'));
     }
 
     /**

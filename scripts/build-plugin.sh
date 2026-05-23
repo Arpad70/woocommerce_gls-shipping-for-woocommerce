@@ -32,6 +32,21 @@ fi
 
 rsync -a "${RSYNC_EXCLUDES[@]}" "${ROOT_DIR}/" "${STAGING_DIR}/"
 
+if [[ -f "${STAGING_DIR}/composer.json" ]]; then
+	if ! command -v composer >/dev/null 2>&1; then
+		echo "Composer is required to build ${PLUGIN_SLUG}." >&2
+		exit 1
+	fi
+
+	(
+		cd "${STAGING_DIR}"
+		composer install --no-dev --prefer-dist --optimize-autoloader --classmap-authoritative --no-interaction
+	)
+	find "${STAGING_DIR}/vendor" -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+	find "${STAGING_DIR}/vendor" -type d -name '.git' -prune -exec rm -rf {} + 2>/dev/null || true
+	find "${STAGING_DIR}/vendor" -type f \( -name '.gitignore' -o -name '.gitattributes' \) -delete 2>/dev/null || true
+fi
+
 rm -f "${ZIP_FILE}"
 (
 	cd "${BUILD_DIR}"

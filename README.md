@@ -9,6 +9,7 @@ AR Design maintained fork pluginu `gls-shipping-for-woocommerce` se standalone r
 - checkout map selection pro GLS pickup pointy
 - okamžitou obnovu checkoutu po výběru GLS pickup pointu
 - skrytí dobírky, pokud vybraný GLS pickup point nepodporuje hotovostní platbu
+- bezpečný datový most pro modern checkout / Store API, aby se GLS pickup volba lépe přenesla i mimo classic-only POST flow
 - build a GitHub release workflow pro standalone vydávání pluginu
 
 ## Požadavky

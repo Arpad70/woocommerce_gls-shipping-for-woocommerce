@@ -11,6 +11,108 @@
 	}
 
 	domReady(function () {
+		var localizedConfig =
+			typeof gls_croatia !== "undefined" && gls_croatia
+				? gls_croatia
+				: {};
+
+		var pickupInfoStorageKey =
+			localizedConfig.pickup_info_storage_key ||
+			"gls_pickup_info";
+		var pickupMethodStorageKey =
+			localizedConfig.pickup_method_storage_key ||
+			"gls_pickup_info_shipping_method";
+		var extensionNamespace =
+			localizedConfig.extension_namespace ||
+			"gls-shipping-for-woocommerce";
+
+		function getStorage() {
+			try {
+				return window.sessionStorage;
+			} catch (error) {
+				return null;
+			}
+		}
+
+		function readStoredPickupInfo() {
+			var storage = getStorage();
+
+			if (!storage) {
+				return "";
+			}
+
+			return storage.getItem(pickupInfoStorageKey) || "";
+		}
+
+		function readStoredShippingMethodBaseId() {
+			var storage = getStorage();
+
+			if (!storage) {
+				return "";
+			}
+
+			return storage.getItem(pickupMethodStorageKey) || "";
+		}
+
+		function persistPickupInfo(pickupInfo, shippingMethodBaseId) {
+			var storage = getStorage();
+
+			if (!storage) {
+				return;
+			}
+
+			storage.setItem(pickupInfoStorageKey, pickupInfo || "");
+			storage.setItem(pickupMethodStorageKey, shippingMethodBaseId || "");
+		}
+
+		function removeStoredPickupInfo() {
+			var storage = getStorage();
+
+			if (!storage) {
+				return;
+			}
+
+			storage.removeItem(pickupInfoStorageKey);
+			storage.removeItem(pickupMethodStorageKey);
+		}
+
+		function parsePickupInfo(pickupInfo) {
+			if (!pickupInfo || typeof pickupInfo !== "string") {
+				return null;
+			}
+
+			try {
+				return JSON.parse(pickupInfo);
+			} catch (error) {
+				return null;
+			}
+		}
+
+		function hasMeaningfulPickupInfo(pickupInfo) {
+			if (!pickupInfo || !String(pickupInfo).trim()) {
+				return false;
+			}
+
+			var parsedPickupInfo = parsePickupInfo(String(pickupInfo));
+
+			if (!parsedPickupInfo || typeof parsedPickupInfo !== "object") {
+				return true;
+			}
+
+			if (parsedPickupInfo.name) {
+				return true;
+			}
+
+			var contact = parsedPickupInfo.contact || {};
+
+			return Boolean(
+				contact.address ||
+					contact.city ||
+					contact.postalCode ||
+					contact.countryCode
+			);
+		}
+
 		function getCheckoutForm() {
 			return document.forms["checkout"] || document.querySelector("form.checkout");
 		}
@@ -50,7 +152,29 @@
 			return hiddenInput;
 		}
 
+		function hydrateHiddenInputFromStorage() {
+			var hiddenInput = getHiddenInput();
+			var storedPickupInfo = readStoredPickupInfo();
+
+			if (!hiddenInput || hiddenInput.value || !hasMeaningfulPickupInfo(storedPickupInfo)) {
+				return hiddenInput;
+			}
+
+			hiddenInput.value = storedPickupInfo;
+
+			var storedMethodBaseId = readStoredShippingMethodBaseId();
+			if (storedMethodBaseId) {
+				hiddenInput.dataset.shippingMethod = storedMethodBaseId;
+			}
+
+			return hiddenInput;
+		}
+
 		function renderPickupInfo(pickupInfo) {
+			if (typeof pickupInfo === "string") {
+				pickupInfo = parsePickupInfo(pickupInfo);
+			}
+
 			var pickupInfoDiv = document.getElementById("gls-pickup-info");
 
 			if (!pickupInfoDiv || !pickupInfo || !pickupInfo.contact) {
@@ -59,13 +183,13 @@
 
 			pickupInfoDiv.innerHTML =
 				"<strong>" +
-				gls_croatia.pickup_location +
+				localizedConfig.pickup_location +
 				":</strong><br>" +
-				gls_croatia.name +
+				localizedConfig.name +
 				": " +
 				(pickupInfo.name || "") +
 				"<br>" +
-				gls_croatia.address +
+				localizedConfig.address +
 				": " +
 				(pickupInfo.contact.address || "") +
 				", " +
@@ -73,7 +197,7 @@
 				", " +
 				(pickupInfo.contact.postalCode || "") +
 				"<br>" +
-				gls_croatia.country +
+				localizedConfig.country +
 				": " +
 				(pickupInfo.contact.countryCode || "");
 			pickupInfoDiv.style.display = "block";
@@ -102,10 +226,14 @@
 						return;
 					}
 
-					hiddenInput.value = JSON.stringify(pickupInfo);
-					hiddenInput.dataset.shippingMethod = getShippingMethodBaseId(
+					var serializedPickupInfo = JSON.stringify(pickupInfo);
+					var shippingMethodBaseId = getShippingMethodBaseId(
 						getCurrentShippingMethodValue()
 					);
+
+					hiddenInput.value = serializedPickupInfo;
+					hiddenInput.dataset.shippingMethod = shippingMethodBaseId;
+					persistPickupInfo(serializedPickupInfo, shippingMethodBaseId);
 
 					if (window.jQuery) {
 						window.jQuery(document.body).trigger("update_checkout");
@@ -139,11 +267,11 @@
 			if (
 				countryLower === "hu" &&
 				mapClass === "gls-map-locker" &&
-				gls_croatia.filter_saturation
+				localizedConfig.filter_saturation
 			) {
 				mapElement.setAttribute(
 					"filter-saturation",
-					gls_croatia.filter_saturation
+					localizedConfig.filter_saturation
 				);
 			} else {
 				mapElement.removeAttribute("filter-saturation");
@@ -181,9 +309,119 @@
 				glsPickupInfoData.value = "";
 				delete glsPickupInfoData.dataset.shippingMethod;
 			}
+
+			removeStoredPickupInfo();
+		}
+
+		function syncPickupInfoFromStorage() {
+			var hiddenInput = hydrateHiddenInputFromStorage();
+			var pickupInfo = hiddenInput && hiddenInput.value ? hiddenInput.value : readStoredPickupInfo();
+
+			if (!hasMeaningfulPickupInfo(pickupInfo)) {
+				return;
+			}
+
+			renderPickupInfo(pickupInfo);
+		}
+
+		function isStoreApiCheckoutUrl(url) {
+			return /\/wc\/store\/(?:v\d+\/)?checkout(?:\/|$|\?)/.test(url);
+		}
+
+		function injectPickupInfoIntoRequestBody(bodyText) {
+			if (typeof bodyText !== "string" || !bodyText.trim()) {
+				return bodyText;
+			}
+
+			var pickupInfo = readStoredPickupInfo();
+			if (!hasMeaningfulPickupInfo(pickupInfo)) {
+				return bodyText;
+			}
+
+			try {
+				var payload = JSON.parse(bodyText);
+				if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+					return bodyText;
+				}
+
+				payload.gls_pickup_info = pickupInfo;
+				payload[pickupInfoStorageKey] = pickupInfo;
+				payload.extensions = payload.extensions || {};
+				payload.extensions[pickupInfoStorageKey] = pickupInfo;
+				payload.extensions[extensionNamespace] =
+					payload.extensions[extensionNamespace] || {};
+				payload.extensions[extensionNamespace].pickup_info = pickupInfo;
+				payload.extensions[extensionNamespace][pickupInfoStorageKey] = pickupInfo;
+
+				return JSON.stringify(payload);
+			} catch (error) {
+				return bodyText;
+			}
+		}
+
+		function installStoreApiCheckoutBridge() {
+			if (
+				typeof window.fetch !== "function" ||
+				window.fetch.__glsPickupBridgeInstalled
+			) {
+				return;
+			}
+
+			var originalFetch = window.fetch.bind(window);
+
+			window.fetch = async function (resource, options) {
+				var requestUrl =
+					typeof resource === "string"
+						? resource
+						: resource && resource.url
+						? resource.url
+						: "";
+
+				if (!isStoreApiCheckoutUrl(requestUrl)) {
+					return originalFetch(resource, options);
+				}
+
+				if (
+					resource instanceof Request &&
+					(!options || typeof options.body === "undefined")
+				) {
+					var requestBody = await resource.clone().text();
+					var patchedRequestBody = injectPickupInfoIntoRequestBody(requestBody);
+
+					if (patchedRequestBody !== requestBody) {
+						var requestHeaders = new Headers(resource.headers || {});
+						if (!requestHeaders.has("Content-Type")) {
+							requestHeaders.set("Content-Type", "application/json");
+						}
+
+						resource = new Request(resource, {
+							body: patchedRequestBody,
+							headers: requestHeaders,
+						});
+					}
+
+					return originalFetch(resource, options);
+				}
+
+				if (options && typeof options.body === "string") {
+					var patchedBody = injectPickupInfoIntoRequestBody(options.body);
+					if (patchedBody !== options.body) {
+						options = Object.assign({}, options, {
+							body: patchedBody,
+						});
+					}
+				}
+
+				return originalFetch(resource, options);
+			};
+
+			window.fetch.__glsPickupBridgeInstalled = true;
 		}
 
 		function updateCheckout() {
+			hydrateHiddenInputFromStorage();
+			syncPickupInfoFromStorage();
+
 			var selectedShippingMethodValue = getCurrentShippingMethodValue();
 			var selectedShippingMethodBaseId = getShippingMethodBaseId(
 				selectedShippingMethodValue
@@ -211,13 +449,18 @@
 			}
 
 			if (!isLockerMethod && !isShopMethod) {
+				if (!selectedShippingMethodBaseId) {
+					return;
+				}
+
 				clearGLSPickupInfo();
 				return;
 			}
 
 			if (
+				selectedShippingMethodBaseId &&
 				hiddenInput &&
-				hiddenInput.value &&
+				hasMeaningfulPickupInfo(hiddenInput.value) &&
 				hiddenInput.dataset.shippingMethod &&
 				hiddenInput.dataset.shippingMethod !== selectedShippingMethodBaseId
 			) {
@@ -232,7 +475,10 @@
 			}
 		});
 
+		hydrateHiddenInputFromStorage();
+		syncPickupInfoFromStorage();
 		bindMapChangeHandlers();
+		installStoreApiCheckoutBridge();
 		document.body.addEventListener("updated_checkout", function () {
 			bindMapChangeHandlers();
 			updateCheckout();

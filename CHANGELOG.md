@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.4.7 - 2026-05-23
+
+- Added a safe GLS pickup data bridge for modern checkout flows: selected pickup info is now mirrored into browser session storage and injected into Store API checkout payloads via extension data.
+- Restored GLS pickup selection rendering after checkout refresh from storage-backed data so classic checkout and modern checkout keep a more explicit shared pickup contract.
+
 ## 1.4.6 - 2026-05-21
 
 - GLS workflow registrace je nově napojená na sdílený AR Design workflow catalog, takže vendor plugin používá stejné slugy a labely jako ostatní carrier vrstvy.

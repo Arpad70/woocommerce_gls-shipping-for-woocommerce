@@ -3,7 +3,7 @@ Contributors: goran87
 Tags: gls, shipping, woocommerce shipping
 Requires at least: 5.9
 Tested up to: 6.9
-Stable tag: 1.4.5
+Stable tag: 1.4.7
 License: GPLv2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -80,6 +80,17 @@ To install and configure this plugin:
 == Screenshots ==
 
 == Changelog ==
+
+= 1.4.7 =
+* Added a safe GLS pickup data bridge for modern checkout flows: selected pickup info is mirrored into browser session storage and injected into Store API checkout payloads via extension data.
+* Restored GLS pickup selection rendering after checkout refresh from storage-backed data so classic checkout and modern checkout keep a shared pickup contract.
+* Packaging: aligned release/build workflow with the shared AR Design build script and explicit uninstall contract.
+
+= 1.4.6 =
+* Internal: separated plugin bootstrap from WooCommerce runtime bootstrap so Woo-dependent logic starts on `woocommerce_loaded`.
+* Checkout hardening: GLS pickup selection now falls back to WooCommerce session data when classic checkout refresh clears direct POST payload.
+* Store API compatibility: added a minimal server-side pickup persistence/validation bridge for modern checkout flows.
+* Packaging: added explicit uninstall contract and aligned README stable tag with plugin version.
 
 = 1.4.5 =
 * Added post-label workflow automation support including print confirmation handling and automatic order status transitions driven by GLS tracking updates.

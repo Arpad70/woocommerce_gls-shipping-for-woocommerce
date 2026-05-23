@@ -65,11 +65,7 @@ jobs:
       - name: Build Release Zip
         if: steps.eligibility.outputs.publish == 'true'
         run: |
-          rm -rf /tmp/gls-shipping-for-woocommerce-release
-          mkdir -p /tmp/gls-shipping-for-woocommerce-release/gls-shipping-for-woocommerce
-          rsync -a ./ /tmp/gls-shipping-for-woocommerce-release/gls-shipping-for-woocommerce/ --exclude-from=.distignore
-          cd /tmp/gls-shipping-for-woocommerce-release
-          zip -r gls-shipping-for-woocommerce.zip gls-shipping-for-woocommerce
+          bash scripts/build-plugin.sh
 
       - name: Publish GitHub Release
         if: steps.eligibility.outputs.publish == 'true'
@@ -79,4 +75,4 @@ jobs:
           name: AR Design GLS Shipping for WooCommerce ${{ steps.version.outputs.tag }}
           generate_release_notes: true
           files: |
-            /tmp/gls-shipping-for-woocommerce-release/gls-shipping-for-woocommerce.zip
+            build/gls-shipping-for-woocommerce-${{ steps.version.outputs.version }}.zip
