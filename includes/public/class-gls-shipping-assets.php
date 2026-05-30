@@ -110,7 +110,7 @@ class GLS_Shipping_Assets
     /**
      * Make sure script is loaded as module type
      */
-    public static function add_module_type_attribute($tag, $handle, $src)
+    public static function add_module_type_attribute(mixed $tag, mixed $handle, mixed $src): mixed
     {
         if ('gls-shipping-dpm' === $handle) {
             // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript -- Modifying already-enqueued script via script_loader_tag filter

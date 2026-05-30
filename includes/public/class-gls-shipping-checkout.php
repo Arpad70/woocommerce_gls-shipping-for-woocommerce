@@ -77,7 +77,7 @@ class GLS_Shipping_Checkout
         }
     }
 
-    public function validate_gls_parcel_shop_selection_on_store_api($order, $request)
+    public function validate_gls_parcel_shop_selection_on_store_api(mixed $order, mixed $request)
     {
         if (!$order instanceof \WC_Order) {
             return;
@@ -87,7 +87,7 @@ class GLS_Shipping_Checkout
         $this->validate_gls_pickup_selection_for_order($order);
     }
 
-    public function validate_gls_parcel_shop_selection_before_payment($context, $result)
+    public function validate_gls_parcel_shop_selection_before_payment(mixed $context, mixed $result)
     {
         $context_data = is_object($context) ? (array) $context : array();
         $order = $context_data['order'] ?? null;
@@ -166,7 +166,7 @@ class GLS_Shipping_Checkout
         }
     }
 
-    public function persist_gls_pickup_info_on_store_api($order, $request)
+    public function persist_gls_pickup_info_on_store_api(mixed $order, mixed $request)
     {
         if (!$order instanceof \WC_Order || !$this->order_uses_gls_pickup_method($order)) {
             return;
@@ -220,7 +220,7 @@ class GLS_Shipping_Checkout
      * @param mixed $shipping_methods Raw shipping methods collection.
      * @return array<int, string>
      */
-    private function normalize_shipping_method_ids($shipping_methods)
+    private function normalize_shipping_method_ids(mixed $shipping_methods)
     {
         if (!is_array($shipping_methods)) {
             return array();
@@ -237,7 +237,7 @@ class GLS_Shipping_Checkout
         }, $shipping_methods)));
     }
 
-    private function validate_gls_pickup_selection_for_order($order)
+    private function validate_gls_pickup_selection_for_order(mixed $order)
     {
         if (!$order instanceof \WC_Order || !$this->order_uses_gls_pickup_method($order)) {
             return;
@@ -254,7 +254,7 @@ class GLS_Shipping_Checkout
         }
     }
 
-    private function order_uses_gls_pickup_method($order)
+    private function order_uses_gls_pickup_method(mixed $order)
     {
         if (!$order instanceof \WC_Order) {
             return false;
@@ -282,7 +282,7 @@ class GLS_Shipping_Checkout
         return sanitize_text_field((string) WC()->session->get(self::SESSION_PICKUP_INFO_KEY, ''));
     }
 
-    private function resolve_pickup_info_from_request_or_session($request = null)
+    private function resolve_pickup_info_from_request_or_session(mixed $request = null)
     {
         $pickup_info = $this->get_pickup_info_from_request($request);
 
@@ -297,7 +297,7 @@ class GLS_Shipping_Checkout
         return $this->get_session_pickup_info();
     }
 
-    private function get_pickup_info_from_request($request = null)
+    private function get_pickup_info_from_request(mixed $request = null)
     {
         // phpcs:disable WordPress.Security.NonceVerification.Missing -- WooCommerce handles checkout nonce verification.
         if (isset($_POST['gls_pickup_info'])) {
@@ -350,7 +350,7 @@ class GLS_Shipping_Checkout
         return '';
     }
 
-    private function has_meaningful_pickup_info($pickup_info)
+    private function has_meaningful_pickup_info(mixed $pickup_info)
     {
         $pickup_info = trim((string) $pickup_info);
 

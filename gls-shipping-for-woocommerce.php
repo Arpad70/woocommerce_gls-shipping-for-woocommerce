@@ -3,7 +3,7 @@
 /**
  * Plugin Name: AR Design GLS Shipping for WooCommerce
  * Description: AR Design maintained GLS Shipping for WooCommerce plugin with checkout pickup fixes, release workflow, and GitHub updater metadata.
- * Version: 1.4.7
+ * Version: 1.4.8
  * Author: Arpád Horák
  * License: GPLv2
  * License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -30,7 +30,7 @@ if (!defined('GLS_SHIPPING_ABSPATH')) {
 }
 
 if (!defined('GLS_SHIPPING_VERSION')) {
-    define('GLS_SHIPPING_VERSION', '1.4.7');
+    define('GLS_SHIPPING_VERSION', '1.4.8');
 }
 
 if (!defined('GLS_LABELS_DIR') || !defined('GLS_LABELS_URL')) {
@@ -71,10 +71,10 @@ if (!defined('GLS_SHIPPING_METHOD_PARCEL_SHOP_ZONES_ID')) {
 
 final class GLS_Shipping_For_Woo
 {
-    private static $instance;
+    private static ?self $instance = null;
 
-    private $version = '1.4.7';
-    private $woocommerce_runtime_bootstrapped = false;
+    private $version = '1.4.8';
+    private bool $woocommerce_runtime_bootstrapped = false;
 
     private function __construct()
     {
@@ -168,7 +168,7 @@ final class GLS_Shipping_For_Woo
         return $this->version;
     }
 
-    private function autoloader($class)
+    private function autoloader(mixed $class): void
     {
         $class = strtolower($class);
         // Remove prefix
@@ -354,7 +354,7 @@ final class GLS_Shipping_For_Woo
         load_plugin_textdomain('gls-shipping-for-woocommerce', false, basename(dirname(__FILE__)) . '/languages/');
     }
 
-    public function add_gls_shipping_methods($methods)
+    public function add_gls_shipping_methods(mixed $methods): mixed
     {
         $methods[GLS_SHIPPING_METHOD_ID] = 'GLS_Shipping_Method';
         $methods[GLS_SHIPPING_METHOD_ZONES_ID] = 'GLS_Shipping_Method_Zones';
@@ -373,7 +373,7 @@ final class GLS_Shipping_For_Woo
      * @param  string $name
      * @param  string|bool $value
      */
-    private function define($name, $value)
+    private function define(string $name, string|bool $value): void
     {
         if (!defined($name)) {
             define($name, $value);
