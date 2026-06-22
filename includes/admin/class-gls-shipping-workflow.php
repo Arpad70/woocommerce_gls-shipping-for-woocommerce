@@ -4,14 +4,15 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+require_once WP_PLUGIN_DIR . '/ar-design-shared-support/includes/workflow/OrderStatusTransitionService.php';
+
 class GLS_Shipping_Workflow
 {
     public const CRON_HOOK = 'gls_shipping_tracking_sync_event';
     public const CRON_SCHEDULE = 'gls_shipping_every_thirty_minutes';
-    public const RETURN_STATUS = ARD_WORKFLOW_STATUS_RETURN;
-    public const READY_TO_SHIP_STATUS = ARD_WORKFLOW_STATUS_READY_TO_SHIP;
-    public const IN_TRANSIT_STATUS = ARD_WORKFLOW_STATUS_IN_TRANSIT;
-    public const MANUAL_REVIEW_STATUS = ARD_WORKFLOW_STATUS_MANUAL_REVIEW;
+    public const READY_TO_SHIP_STATUS = 'zabalena';
+    public const IN_TRANSIT_STATUS = 'v-preprave';
+    public const MANUAL_REVIEW_STATUS = 'manual-review';
     public const CURRENT_STATUS_META_KEY = '_gls_tracking_current_status';
     public const CURRENT_STATUS_CODE_META_KEY = '_gls_tracking_current_status_code';
     public const CURRENT_LABEL_META_KEY = '_gls_tracking_current_label';
@@ -22,9 +23,7 @@ class GLS_Shipping_Workflow
     public const HISTORY_META_KEY = '_gls_tracking_history';
 
     private const MANAGED_STATUSES = array(
-        self::READY_TO_SHIP_STATUS,
         self::IN_TRANSIT_STATUS,
-        self::RETURN_STATUS,
     );
 
     public function __construct()
@@ -53,18 +52,11 @@ class GLS_Shipping_Workflow
             return $statuses;
         }
 
-        $statuses = ard_workflow_insert_statuses_after(
-            $statuses,
-            array(self::READY_TO_SHIP_STATUS, self::IN_TRANSIT_STATUS),
-            'gls-shipping-for-woocommerce',
-            'wc-processing'
-        );
-
         return ard_workflow_insert_statuses_after(
             $statuses,
-            array(self::RETURN_STATUS),
+            array(self::IN_TRANSIT_STATUS),
             'gls-shipping-for-woocommerce',
-            'wc-completed'
+            'wc-zabalena'
         );
     }
 
@@ -102,7 +94,7 @@ class GLS_Shipping_Workflow
         $this->mark_label_printed($order);
         $order->save();
 
-        wp_send_json_success(array('message' => __('Order status was changed to Na odoslanie.', 'gls-shipping-for-woocommerce')));
+        wp_send_json_success(array('message' => __('Shipping label was confirmed as printed.', 'gls-shipping-for-woocommerce')));
     }
 
     public function mark_label_printed($order)
@@ -111,14 +103,8 @@ class GLS_Shipping_Workflow
             return false;
         }
 
-        return $this->transition_order_status(
-            $order,
-            self::READY_TO_SHIP_STATUS,
-            __('Shipping label was downloaded and confirmed as printed. Order moved to Na odoslanie.', 'gls-shipping-for-woocommerce'),
-            '',
-            false,
-            array('cancelled', 'refunded', 'failed', 'completed', self::RETURN_STATUS, self::MANUAL_REVIEW_STATUS, self::IN_TRANSIT_STATUS)
-        );
+        $order->add_order_note(__('Shipping label was downloaded and confirmed as printed.', 'gls-shipping-for-woocommerce'));
+        return true;
     }
 
     public function sync_open_shipments()
@@ -130,7 +116,7 @@ class GLS_Shipping_Workflow
         $orders = wc_get_orders(array(
             'limit' => 100,
             'return' => 'objects',
-            'status' => array('pending', 'processing', 'on-hold', 'na-odoslanie', 'zabalena', 'v-preprave'),
+            'status' => array('pending', 'processing', 'on-hold', 'zabalena', 'v-preprave'),
             'meta_query' => array(
                 'relation' => 'OR',
                 array(
@@ -267,7 +253,7 @@ class GLS_Shipping_Workflow
                 __('Carrier confirmed that the shipment is in transit.', 'gls-shipping-for-woocommerce'),
                 __('Your shipment has been handed over to the carrier and is now in transit.', 'gls-shipping-for-woocommerce'),
                 true,
-                array('cancelled', 'refunded', 'failed', 'completed', self::RETURN_STATUS, self::MANUAL_REVIEW_STATUS)
+                array('cancelled', 'refunded', 'failed', 'completed', self::MANUAL_REVIEW_STATUS)
             );
 
             return;
@@ -276,7 +262,7 @@ class GLS_Shipping_Workflow
         if ($status === 'delivered') {
             $this->transition_order_status(
                 $order,
-                'completed',
+                defined('ARD_WORKFLOW_STATUS_PICKED_UP') ? ARD_WORKFLOW_STATUS_PICKED_UP : 'prevzata',
                 __('Carrier confirmed successful delivery.', 'gls-shipping-for-woocommerce'),
                 '',
                 false,
@@ -286,73 +272,22 @@ class GLS_Shipping_Workflow
             return;
         }
 
-        if ($status === 'returning_to_sender') {
-            $this->transition_order_status(
-                $order,
-                self::RETURN_STATUS,
-                __('Carrier reported that the shipment is returning to the sender.', 'gls-shipping-for-woocommerce'),
-                '',
-                false,
-                array('cancelled', 'refunded', 'failed', 'completed', self::MANUAL_REVIEW_STATUS)
-            );
-
-            return;
-        }
-
-        if ($status === 'sender_received_return') {
-            $this->transition_order_status(
-                $order,
-                self::MANUAL_REVIEW_STATUS,
-                __('Returned shipment was received back and now requires manual review.', 'gls-shipping-for-woocommerce'),
-                '',
-                false,
-                array('cancelled', 'refunded', 'failed', 'completed')
-            );
+        if (in_array($status, array('returning_to_sender', 'sender_received_return'), true)) {
+            $order->add_order_note(__('Carrier reported a return event. WooCommerce status was left unchanged.', 'gls-shipping-for-woocommerce'));
         }
     }
 
     private function transition_order_status($order, $target_status, $internal_note, $customer_note = '', $notify_customer = false, $blocked_statuses = array())
     {
-        if (!$order instanceof \WC_Order) {
-            return false;
-        }
-
-        $target_status = sanitize_key($target_status);
-        if ($target_status === '') {
-            return false;
-        }
-
-        if (!$this->is_status_available($target_status)) {
-            $order->add_order_note(sprintf(
-                /* translators: %s: requested WooCommerce order status slug. */
-                __('Requested workflow status "%s" is not available, so the order status was not changed.', 'gls-shipping-for-woocommerce'),
-                $target_status
-            ));
-
-            return false;
-        }
-
-        if ($order->has_status(array($target_status))) {
-            return false;
-        }
-
-        if (!empty($blocked_statuses) && $order->has_status($blocked_statuses)) {
-            return false;
-        }
-
-        $order->update_status($target_status, $internal_note);
-        if ($notify_customer && $customer_note !== '') {
-            $order->add_order_note($customer_note, true, false);
-        }
-
-        return true;
-    }
-
-    private function is_status_available($status)
-    {
-        $statuses = function_exists('wc_get_order_statuses') ? wc_get_order_statuses() : array();
-
-        return isset($statuses['wc-' . $status]);
+        return \ArDesign\Shared\Workflow\OrderStatusTransitionService::transition(
+            $order,
+            (string) $target_status,
+            (string) $internal_note,
+            'gls-shipping-for-woocommerce',
+            (string) $customer_note,
+            (bool) $notify_customer,
+            is_array($blocked_statuses) ? $blocked_statuses : array()
+        );
     }
 
     private function is_api_configured()
