@@ -3,12 +3,13 @@
 /**
  * Plugin Name: AR Design GLS Shipping for WooCommerce
  * Description: AR Design maintained GLS Shipping for WooCommerce plugin with checkout pickup fixes, release workflow, and GitHub updater metadata.
- * Version: 1.4.9
+ * Version: 1.4.10
  * Author: Arpád Horák
  * License: GPLv2
  * License URI: http://www.gnu.org/licenses/gpl-2.0.html
  * Author URI: https://arpad-horak.cz
  * Update URI: https://github.com/Arpad70/woocommerce_gls-shipping-for-woocommerce
+ * Requires Plugins: ar-design-shared-support
  * Text Domain: gls-shipping-for-woocommerce
  * Domain Path: /languages
  * Requires at least: 5.9
@@ -30,7 +31,7 @@ if (!defined('GLS_SHIPPING_ABSPATH')) {
 }
 
 if (!defined('GLS_SHIPPING_VERSION')) {
-    define('GLS_SHIPPING_VERSION', '1.4.9');
+    define('GLS_SHIPPING_VERSION', '1.4.10');
 }
 
 if (!defined('GLS_LABELS_DIR') || !defined('GLS_LABELS_URL')) {
@@ -73,7 +74,7 @@ final class GLS_Shipping_For_Woo
 {
     private static ?self $instance = null;
 
-    private $version = '1.4.9';
+    private $version = '1.4.10';
     private bool $woocommerce_runtime_bootstrapped = false;
 
     private function __construct()
